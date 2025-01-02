@@ -23,13 +23,14 @@ class FileItem {
 
   factory FileItem.fromJson(Map<String, dynamic> json) {
     return FileItem(
-        name: json['name'],
-        type: json['type'],
-        path: json['path'],
-        createdAt: json['created'],
-        size: json['size'],
-        mediaType: json['media_type'],
-        previewUrl: json['preview'],
-        downloadUrl: json['file']);
+      name: json['name'],
+      type: json['type'],
+      path: json['path'],
+      createdAt: json['created'],
+      size: json['size'],
+      mediaType: json['media_type'],
+      previewUrl: json['preview'],
+      downloadUrl: json['file'],
+    );
   }
 }

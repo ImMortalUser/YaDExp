@@ -78,11 +78,8 @@ class _FilesScreenState extends State<FilesScreen> {
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              const DrawerHeader(
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                ),
-                child: Text('Меню'),
+              Container(
+                height: 80,
               ),
               ListTile(
                 title: const Text('Настройки'),

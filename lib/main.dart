@@ -4,7 +4,7 @@ import 'package:ya_disk_explorer/screens/files_screen.dart';
 import 'package:ya_disk_explorer/screens/sign_in_screen.dart';
 import 'package:ya_disk_explorer/utils/data.dart';
 import 'package:ya_disk_explorer/utils/settings_storage.dart';
-import 'package:ya_disk_explorer/widgets/video_player.dart';
+import 'package:ya_disk_explorer/widgets/video_player_widget.dart';
 
 bool hasToken = false;
 
@@ -44,8 +44,7 @@ class MyApp extends StatelessWidget {
         return MaterialApp(
           theme: data.theme == "light" ? ThemeData.light() : ThemeData.dark(),
           debugShowCheckedModeBanner: false,
-          home: const VideoPlayerScreen(),
-          //hasToken ? const FilesScreen() : SignInScreen(),
+          home: hasToken ? const FilesScreen() : SignInScreen(),
         );
       }),
     );
