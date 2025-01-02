@@ -1,16 +1,14 @@
-# ya_disk_explorer
+## YaDiskExplorer
 
-A new Flutter project.
+YaDiskExplorer — это Flutter-приложение для работы с Яндекс.Диском. Оно предоставляет функциональность для просмотра, загрузки и удаления файлов с облачного хранилища Яндекса. В проекте реализованы следующие основные компоненты:
 
-## Getting Started
+- **Видео плеер**: использует библиотеку `video_player` для воспроизведения видеофайлов.
+- **Аудио плеер**: использует библиотеку `audioplayers` для воспроизведения аудиофайлов.
+- **Глобальные настройки**: данные о настройках приложения сохраняются с помощью `shared_preferences`.
+- **Аутентификация через Яндекс аккаунт**: реализация аутентификации через аккаунт Яндекса с использованием `flutter_web_auth_2`.
 
-This project is a starting point for a Flutter application.
-
-A few resources to get you started if this is your first Flutter project:
-
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
-
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+### Функциональные возможности:
+- Просмотр, загрузка и удаление файлов на Яндекс.Диске.
+- Воспроизведение медиафайлов (аудио и видео).
+- Сохранение пользовательских настроек.
+- Подключение к Яндекс.Диску через аутентификацию пользователя.
