@@ -1,3 +1,5 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:ya_disk_explorer/models/disk_info.dart';
 import 'package:ya_disk_explorer/screens/settings_screen.dart';
@@ -6,6 +8,7 @@ import 'package:ya_disk_explorer/utils/settings_storage.dart';
 import 'package:ya_disk_explorer/widgets/disk_info_widget.dart';
 import 'package:ya_disk_explorer/widgets/file_list_item.dart';
 import '../models/file_item.dart';
+import '../services/file_picker.dart';
 import '../utils/data.dart';
 import '../widgets/file_greed_item.dart';
 
@@ -59,6 +62,7 @@ class _FilesScreenState extends State<FilesScreen> {
   void _reloadData() {
     setState(() {
       items = YandexDiskService.getFilesList(path: currentPath, force: true);
+      diskInfo = YandexDiskService.getDiskInfo();
     });
   }
 
@@ -72,6 +76,10 @@ class _FilesScreenState extends State<FilesScreen> {
       return false;
     }
     return true;
+  }
+
+  Future<void> _onRefresh() async {
+    _reloadData();
   }
 
   @override
@@ -124,6 +132,30 @@ class _FilesScreenState extends State<FilesScreen> {
             },
           ),
           actions: [
+            IconButton(
+              onPressed: () async {
+                File? file = await FilePickerService.pickFile();
+
+                if (file != null) {
+                  bool success = await YandexDiskService.uploadFile(file.path);
+                  if (success) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Файл успешно загружен!')),
+                    );
+                    _reloadData();
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Ошибка загрузки файла.')),
+                    );
+                  }
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Файл не выбран.')),
+                  );
+                }
+              },
+              icon: const Icon(Icons.add),
+            ),
             PopupMenuButton<int>(
               onSelected: (value) {
                 switch (value) {
@@ -161,39 +193,42 @@ class _FilesScreenState extends State<FilesScreen> {
           ],
           title: Text(currentPath),
         ),
-        body: FutureBuilder<List<FileItem>>(
-          future: items,
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Ошибка: ${snapshot.error}'));
-            } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-              return const Center(child: Text('Нет файлов.'));
-            }
+        body: RefreshIndicator(
+          onRefresh: _onRefresh, // Добавляем метод обновления
+          child: FutureBuilder<List<FileItem>>(
+            future: items,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState == ConnectionState.waiting) {
+                return const Center(child: CircularProgressIndicator());
+              } else if (snapshot.hasError) {
+                return Center(child: Text('Ошибка: ${snapshot.error}'));
+              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                return const Center(child: Text('Нет файлов.'));
+              }
 
-            final files = snapshot.data!;
+              final files = snapshot.data!;
 
-            return bigIcons == false
-                ? ListView.builder(
-                    itemCount: files.length,
-                    itemBuilder: (context, index) {
-                      return ListItem(properties: files[index]);
-                    },
-                  )
-                : GridView.builder(
-                    gridDelegate:
-                        const SliverGridDelegateWithFixedCrossAxisCount(
-                      crossAxisCount: 2,
-                      crossAxisSpacing: 10,
-                      mainAxisSpacing: 10,
-                    ),
-                    itemCount: files.length,
-                    itemBuilder: (context, index) {
-                      return GridItem(properties: files[index]);
-                    },
-                  );
-          },
+              return bigIcons == false
+                  ? ListView.builder(
+                itemCount: files.length,
+                itemBuilder: (context, index) {
+                  return ListItem(properties: files[index]);
+                },
+              )
+                  : GridView.builder(
+                gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 2,
+                  crossAxisSpacing: 10,
+                  mainAxisSpacing: 10,
+                ),
+                itemCount: files.length,
+                itemBuilder: (context, index) {
+                  return GridItem(properties: files[index]);
+                },
+              );
+            },
+          ),
         ),
       ),
     );

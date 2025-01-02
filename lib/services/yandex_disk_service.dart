@@ -1,4 +1,6 @@
 import 'dart:convert';
+import 'dart:io';
+import 'package:dio/dio.dart';
 import 'package:ya_disk_explorer/utils/data.dart';
 import 'package:http/http.dart' as http;
 import '../models/disk_info.dart';
@@ -98,6 +100,49 @@ class YandexDiskService {
     } catch (e) {
       print('Ошибка при выполнении запроса: $e');
       return null;
+    }
+  }
+
+  static Future<bool> uploadFile(String filePath) async {
+    try {
+      String encodedPath = Uri.encodeComponent(filePath.split('/').last); // Имя файла
+
+      final response = await Dio().get(
+        'https://cloud-api.yandex.net/v1/disk/resources/upload?path=$encodedPath',
+        options: Options(
+          headers: {
+            'Authorization': 'OAuth ${Data().accessToken}',
+            'Accept': 'application/json',
+          },
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        String uploadUrl = response.data['href'];
+
+        var file = File(filePath);
+        final uploadResponse = await Dio().put(
+          uploadUrl,
+          data: file.openRead(),
+          options: Options(
+            headers: {'Authorization': 'OAuth ${Data().accessToken}'},
+          ),
+        );
+
+        if (uploadResponse.statusCode == 201) {
+          print("Файл успешно загружен на Яндекс.Диск.");
+          return true;
+        } else {
+          print("Ошибка при загрузке файла: ${uploadResponse.statusCode}");
+          return false;
+        }
+      } else {
+        print("Не удалось получить ссылку для загрузки файла.");
+        return false;
+      }
+    } catch (e) {
+      print("Ошибка при загрузке файла: $e");
+      return false;
     }
   }
 }
