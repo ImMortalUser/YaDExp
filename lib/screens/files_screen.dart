@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import 'package:ya_disk_explorer/models/disk_info.dart';
 import 'package:ya_disk_explorer/screens/settings_screen.dart';
 import 'package:ya_disk_explorer/services/yandex_disk_service.dart';
 import 'package:ya_disk_explorer/utils/settings_storage.dart';
+import 'package:ya_disk_explorer/widgets/disk_info_widget.dart';
 import 'package:ya_disk_explorer/widgets/file_list_item.dart';
 import '../models/file_item.dart';
 import '../utils/data.dart';
@@ -18,13 +20,16 @@ class _FilesScreenState extends State<FilesScreen> {
   late Future<List<FileItem>> items;
   String currentPath = Data().currentPath;
   bool bigIcons = Data().bigIcons;
+  late Future<DiskInfo?> diskInfo;
 
   @override
   void initState() {
     super.initState();
-    items = YandexDiskService.getFilesList(currentPath);
+    items = YandexDiskService.getFilesList(path: currentPath);
+    diskInfo = YandexDiskService.getDiskInfo();
     Data().addListener(_onPathChanged);
     Data().addListener(_onBigIconsChanged);
+    Data().refresh = _reloadData;
   }
 
   @override
@@ -38,7 +43,7 @@ class _FilesScreenState extends State<FilesScreen> {
     if (Data().currentPath != currentPath) {
       setState(() {
         currentPath = Data().currentPath;
-        items = YandexDiskService.getFilesList(currentPath);
+        items = YandexDiskService.getFilesList(path: currentPath);
       });
     }
   }
@@ -53,7 +58,7 @@ class _FilesScreenState extends State<FilesScreen> {
 
   void _reloadData() {
     setState(() {
-      items = YandexDiskService.getFilesList(currentPath);
+      items = YandexDiskService.getFilesList(path: currentPath, force: true);
     });
   }
 
@@ -62,7 +67,7 @@ class _FilesScreenState extends State<FilesScreen> {
       Data().goBack();
       setState(() {
         currentPath = Data().currentPath;
-        items = YandexDiskService.getFilesList(currentPath);
+        items = YandexDiskService.getFilesList(path: currentPath);
       });
       return false;
     }
@@ -81,6 +86,19 @@ class _FilesScreenState extends State<FilesScreen> {
               Container(
                 height: 80,
               ),
+              FutureBuilder<DiskInfo?>(
+                  future: diskInfo,
+                  builder: (context, snapshot) {
+                    if (snapshot.connectionState == ConnectionState.waiting) {
+                      return const Center(child: CircularProgressIndicator());
+                    } else if (snapshot.hasError || !snapshot.hasData) {
+                      return const Center(
+                        child: Text("Не удалось загрузить информацию о диске"),
+                      );
+                    } else {
+                      return DiskInfoWidget(diskInfo: snapshot.data!);
+                    }
+                  }),
               ListTile(
                 title: const Text('Настройки'),
                 onTap: () {
@@ -90,10 +108,6 @@ class _FilesScreenState extends State<FilesScreen> {
                         builder: (context) => const SettingsScreen()),
                   );
                 },
-              ),
-              ListTile(
-                title: const Text('Выход'),
-                onTap: () {},
               ),
             ],
           ),
@@ -120,7 +134,8 @@ class _FilesScreenState extends State<FilesScreen> {
                     Data().currentPath = "disk:/";
                     setState(() {
                       currentPath = Data().currentPath;
-                      items = YandexDiskService.getFilesList(currentPath);
+                      items = YandexDiskService.getFilesList(
+                          path: currentPath, force: false);
                     });
                     break;
                   case 2:

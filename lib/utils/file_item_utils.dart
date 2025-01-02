@@ -3,6 +3,7 @@ import 'dart:typed_data';
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
+import 'package:ya_disk_explorer/services/yandex_disk_service.dart';
 import 'package:ya_disk_explorer/widgets/music_player_widget.dart';
 import 'dart:io';
 
@@ -73,6 +74,24 @@ class FileItemUtils {
           ),
           actions: <Widget>[
             TextButton(
+              child: const Text('Download'),
+              onPressed: () {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Download started...'),
+                    duration: Duration(seconds: 2),
+                  ),
+                );
+                downloadFile(context, properties);
+              },
+            ),
+            TextButton(
+              child: const Text('Delete'),
+              onPressed: () {
+                deleteFile(context, properties);
+              },
+            ),
+            TextButton(
               child: const Text('Close'),
               onPressed: () {
                 Navigator.of(context).pop();
@@ -89,11 +108,11 @@ class FileItemUtils {
       context: context,
       builder: (BuildContext context) {
         return AlertDialog(
-          title: const Text('Успех!'),
-          content: const Text('Файл успешно загружен.'),
+          title: const Text('Completed'),
+          content: const Text('File successfully downloaded'),
           actions: <Widget>[
             TextButton(
-              child: const Text('Закрыть'),
+              child: const Text('Close'),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -140,11 +159,11 @@ class FileItemUtils {
                     ? VideoPlayerWidget(videoUrl: properties.downloadUrl!)
                     : properties.mediaType == "audio"
                         ? MusicPlayerWidget(audioUrl: properties.downloadUrl!)
-                        : const Text("Формат файла не поддерживается."),
+                        : const Text("Unsupported file format."),
           ),
           actions: <Widget>[
             TextButton(
-              child: const Text("Закрыть"),
+              child: const Text("Close"),
               onPressed: () {
                 Navigator.of(context).pop();
               },
@@ -170,11 +189,76 @@ class FileItemUtils {
       if (response.statusCode == 200) {
         return response.data as Uint8List;
       } else {
-        throw Exception("Ошибка при получении изображения");
+        throw Exception("Error with fetching image");
       }
     } catch (e) {
-      print("Ошибка: $e");
-      throw Exception("Не удалось загрузить изображение");
+      print("Error: $e");
+      throw Exception("Image downloading failed");
     }
+  }
+
+  static Future<void> deleteFile(
+      BuildContext context, FileItem properties) async {
+    try {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Удаление файла началось...'),
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      bool success = await YandexDiskService.deleteFile(properties.path);
+
+      if (success) {
+        _showDeleteSuccessDialog(context);
+        Data().refresh!();
+      } else {
+        _showDeleteFailureDialog(context);
+      }
+
+    } catch (e) {
+      print('Ошибка при удалении: $e');
+      _showDeleteFailureDialog(context);
+    }
+  }
+
+  static void _showDeleteSuccessDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Удаление прошло успешно'),
+          content: const Text('Файл был удален с Яндекс.Диска.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  static void _showDeleteFailureDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Ошибка при удалении'),
+          content: const Text('Не удалось удалить файл.'),
+          actions: <Widget>[
+            TextButton(
+              child: const Text('OK'),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
   }
 }

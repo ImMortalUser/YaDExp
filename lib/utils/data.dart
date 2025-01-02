@@ -1,6 +1,8 @@
 import 'package:flutter/foundation.dart';
 
 class Data extends ChangeNotifier {
+  Function? _refresh;
+
   String? accessToken;
   String _currentPath = "disk:/";
   final List<String> _pathHistory = [];
@@ -8,6 +10,8 @@ class Data extends ChangeNotifier {
   bool _bigIcons = false;
 
   String get currentPath => _currentPath;
+
+  Function? get refresh => _refresh;
 
   List<String> get pathHistory => List.unmodifiable(_pathHistory);
 
@@ -21,6 +25,10 @@ class Data extends ChangeNotifier {
       _currentPath = newPath;
       notifyListeners();
     }
+  }
+
+  set refresh(Function? func) {
+    _refresh = func;
   }
 
   void goBack() {
