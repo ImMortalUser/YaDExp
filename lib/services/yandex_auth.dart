@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'package:flutter_web_auth_2/flutter_web_auth_2.dart';
 import 'package:http/http.dart' as http;
-import 'package:ya_disk_explorer/utils/token_storage.dart';
+import 'package:ya_disk_explorer/utils/settings_storage.dart';
 
 class YandexAuth {
   static const String clientId = "53f12fa4f3ec453fb06dbd21ed463f42";
@@ -44,7 +44,7 @@ class YandexAuth {
         final tokenData = json.decode(response.body);
 
         if (tokenData.containsKey('access_token')) {
-          TokenStorage.saveToken(tokenData['access_token']);
+          SettingsStorage.saveToken(tokenData['access_token']);
         }
       }
     } catch (_) {}

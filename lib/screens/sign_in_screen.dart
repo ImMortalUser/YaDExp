@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
-import 'package:ya_disk_explorer/utils/global_data.dart';
-import 'package:ya_disk_explorer/utils/token_storage.dart';
+import 'package:ya_disk_explorer/utils/data.dart';
+import 'package:ya_disk_explorer/utils/settings_storage.dart';
 
 import '../services/yandex_auth.dart';
 import 'files_screen.dart';
@@ -96,8 +96,8 @@ class SignInScreen extends StatelessWidget {
                 ),
                 onPressed: () async {
                   await YandexAuth.authenticate();
-                  await TokenStorage.loadToken()
-                      .then((token) => GlobalData.accessToken = token);
+                  await SettingsStorage.loadToken()
+                      .then((token) => Data().accessToken = token);
                   Navigator.pushReplacement(
                     context,
                     MaterialPageRoute(builder: (context) => FilesScreen()),

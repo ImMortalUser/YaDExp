@@ -1,34 +1,80 @@
 import 'package:flutter/material.dart';
-import 'package:ya_disk_explorer/utils/global_data.dart';
+import 'package:ya_disk_explorer/utils/data.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'dart:io';
-
+import 'dart:typed_data';
 import '../models/file_item.dart';
 
-class Item extends StatelessWidget {
+class GridItem extends StatelessWidget {
   final FileItem properties;
 
-  const Item({super.key, required this.properties});
+  const GridItem({super.key, required this.properties});
 
   @override
   Widget build(BuildContext context) {
-    return ListTile(
-      leading: properties.type == "dir"
-          ? const Icon(Icons.folder)
-          : const Icon(Icons.file_copy),
-      title: Text(properties.name),
+    return InkWell(
       onTap: () async {
         if (properties.type != "dir") {
-          await _downloadFile(context,properties.path);
+          await _downloadFile(context, properties.path);
         } else {
-          GlobalData.currentPath = properties.path;
+          Data().currentPath = properties.path;
         }
       },
       onLongPress: () {
         _showFileInfoDialog(context);
       },
+      child: GridTile(
+        footer: Text(
+          properties.name,
+          textAlign: TextAlign.center,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        child: properties.type == "dir"
+            ? const Icon(Icons.folder, size: 100)
+            : properties.previewUrl == null
+                ? const Icon(Icons.file_copy, size: 100)
+                : FutureBuilder<Uint8List>(
+                    future: _fetchPreviewImage(properties.previewUrl!),
+                    builder: (context, snapshot) {
+                      if (snapshot.connectionState == ConnectionState.waiting) {
+                        return const Center(child: CircularProgressIndicator());
+                      } else if (snapshot.hasError) {
+                        return const Center(child: Icon(Icons.error));
+                      } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                        return const Center(child: Icon(Icons.error));
+                      } else {
+                        return Image.memory(snapshot.data!);
+                      }
+                    },
+                  ),
+      ),
     );
+  }
+
+  Future<Uint8List> _fetchPreviewImage(String previewUrl) async {
+    try {
+      final response = await Dio().get(
+        previewUrl,
+        options: Options(
+          headers: {
+            'Authorization': 'OAuth ${Data().accessToken}',
+            'Accept': 'application/json',
+          },
+          responseType: ResponseType.bytes,
+        ),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data as Uint8List;
+      } else {
+        throw Exception('Ошибка при получении изображения');
+      }
+    } catch (e) {
+      print('Ошибка при загрузке превью: $e');
+      throw Exception('Не удалось загрузить превью');
+    }
   }
 
   void _showFileInfoDialog(BuildContext context) {
@@ -43,7 +89,8 @@ class Item extends StatelessWidget {
                 Text('Type: ${properties.type}'),
                 Text('Path: ${properties.path}'),
                 Text('Created at: ${properties.createdAt}'),
-                Text('Size: ${properties.size != null ? properties.size.toString() : 'N/A'}'),
+                Text(
+                    'Size: ${properties.size != null ? properties.size.toString() : 'N/A'}'),
                 Text('Media Type: ${properties.mediaType ?? 'N/A'}'),
               ],
             ),
@@ -61,14 +108,14 @@ class Item extends StatelessWidget {
     );
   }
 
-  Future<void> _downloadFile(BuildContext context, String path) async {  // Передаем context
+  Future<void> _downloadFile(BuildContext context, String path) async {
     try {
       final encodedPath = Uri.encodeFull(path);
       final response = await Dio().get(
         'https://cloud-api.yandex.net/v1/disk/resources/download?path=$encodedPath',
         options: Options(
           headers: {
-            'Authorization': 'OAuth ${GlobalData.accessToken}',
+            'Authorization': 'OAuth ${Data().accessToken}',
             'Accept': 'application/json',
           },
         ),
@@ -83,7 +130,7 @@ class Item extends StatelessWidget {
             final filePath = '${directory.path}/${properties.name}';
             final fileResponse = await Dio().download(downloadUrl, filePath);
             if (fileResponse.statusCode == 200) {
-              _showDownloadSuccessDialog(context);  // Показываем всплывающее окно о успешной загрузке
+              _showDownloadSuccessDialog(context);
             } else {
               print('Не удалось скачать файл');
             }
@@ -94,13 +141,13 @@ class Item extends StatelessWidget {
           print('Не найден URL для скачивания');
         }
       } else {
-        print('Ошибка при получении URL для скачивания: ${response.statusCode}');
+        print(
+            'Ошибка при получении URL для скачивания: ${response.statusCode}');
       }
     } catch (e) {
       print('Ошибка при загрузке: $e');
     }
   }
-
 
   void _showDownloadSuccessDialog(BuildContext context) {
     showDialog(
@@ -121,8 +168,6 @@ class Item extends StatelessWidget {
       },
     );
   }
-
-
 
   Future<Directory?> _getDownloadDirectory() async {
     if (Platform.isAndroid) {

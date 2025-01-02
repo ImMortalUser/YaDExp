@@ -1,5 +1,5 @@
 import 'dart:convert';
-import 'package:ya_disk_explorer/utils/global_data.dart';
+import 'package:ya_disk_explorer/utils/data.dart';
 import 'package:http/http.dart' as http;
 import '../models/file_item.dart';
 
@@ -17,7 +17,7 @@ class YandexDiskService {
       final response = await http.get(
         Uri.parse('https://cloud-api.yandex.net/v1/disk/resources?path=$encodedPath&fields=_embedded.items.name,_embedded.items.type,_embedded.items.path,_embedded.items.created,_embedded.items.size,_embedded.items.media_type,_embedded.items.preview'),
         headers: {
-          'Authorization': 'OAuth ${GlobalData.accessToken}',
+          'Authorization': 'OAuth ${Data().accessToken}',
         },
       );
 

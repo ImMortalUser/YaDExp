@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:ya_disk_explorer/screens/settings_screen.dart';
 import 'package:ya_disk_explorer/services/yandex_disk_service.dart';
-import 'package:ya_disk_explorer/utils/token_storage.dart';
-import 'package:ya_disk_explorer/widgets/item.dart';
+import 'package:ya_disk_explorer/utils/settings_storage.dart';
+import 'package:ya_disk_explorer/widgets/file_list_item.dart';
 import '../models/file_item.dart';
-import '../utils/global_data.dart';
+import '../utils/data.dart';
+import '../widgets/file_greed_item.dart';
 
 class FilesScreen extends StatefulWidget {
   const FilesScreen({super.key});
@@ -14,26 +16,37 @@ class FilesScreen extends StatefulWidget {
 
 class _FilesScreenState extends State<FilesScreen> {
   late Future<List<FileItem>> items;
-  String currentPath = GlobalData.currentPath;
+  String currentPath = Data().currentPath;
+  bool bigIcons = Data().bigIcons;
 
   @override
   void initState() {
     super.initState();
     items = YandexDiskService.getFilesList(currentPath);
-    GlobalData().addListener(_onPathChanged);
+    Data().addListener(_onPathChanged);
+    Data().addListener(_onBigIconsChanged);
   }
 
   @override
   void dispose() {
-    GlobalData().removeListener(_onPathChanged);
+    Data().removeListener(_onPathChanged);
+    Data().removeListener(_onBigIconsChanged);
     super.dispose();
   }
 
   void _onPathChanged() {
-    if (GlobalData.currentPath != currentPath) {
+    if (Data().currentPath != currentPath) {
       setState(() {
-        currentPath = GlobalData.currentPath;
+        currentPath = Data().currentPath;
         items = YandexDiskService.getFilesList(currentPath);
+      });
+    }
+  }
+
+  void _onBigIconsChanged() {
+    if (Data().bigIcons != bigIcons) {
+      setState(() {
+        bigIcons = Data().bigIcons;
       });
     }
   }
@@ -45,10 +58,10 @@ class _FilesScreenState extends State<FilesScreen> {
   }
 
   Future<bool> _onWillPop() async {
-    if (GlobalData.pathHistory.isNotEmpty) {
-      GlobalData.goBack();
+    if (Data().pathHistory.isNotEmpty) {
+      Data().goBack();
       setState(() {
-        currentPath = GlobalData.currentPath;
+        currentPath = Data().currentPath;
         items = YandexDiskService.getFilesList(currentPath);
       });
       return false;
@@ -66,14 +79,20 @@ class _FilesScreenState extends State<FilesScreen> {
             padding: EdgeInsets.zero,
             children: [
               const DrawerHeader(
-                child: Text('Меню'),
                 decoration: BoxDecoration(
                   color: Colors.blue,
                 ),
+                child: Text('Меню'),
               ),
               ListTile(
                 title: const Text('Настройки'),
-                onTap: () {},
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const SettingsScreen()),
+                  );
+                },
               ),
               ListTile(
                 title: const Text('Выход'),
@@ -101,14 +120,14 @@ class _FilesScreenState extends State<FilesScreen> {
                     _reloadData();
                     break;
                   case 1:
-                    GlobalData.currentPath = "disk:/";
+                    Data().currentPath = "disk:/";
                     setState(() {
-                      currentPath = GlobalData.currentPath;
+                      currentPath = Data().currentPath;
                       items = YandexDiskService.getFilesList(currentPath);
                     });
                     break;
                   case 2:
-                    TokenStorage.removeToken();
+                    SettingsStorage.removeToken();
                     break;
                 }
               },
@@ -143,12 +162,25 @@ class _FilesScreenState extends State<FilesScreen> {
 
             final files = snapshot.data!;
 
-            return ListView.builder(
-              itemCount: files.length,
-              itemBuilder: (context, index) {
-                return Item(properties: files[index]);
-              },
-            );
+            return bigIcons == false
+                ? ListView.builder(
+                    itemCount: files.length,
+                    itemBuilder: (context, index) {
+                      return ListItem(properties: files[index]);
+                    },
+                  )
+                : GridView.builder(
+                    gridDelegate:
+                        const SliverGridDelegateWithFixedCrossAxisCount(
+                      crossAxisCount: 2,
+                      crossAxisSpacing: 10,
+                      mainAxisSpacing: 10,
+                    ),
+                    itemCount: files.length,
+                    itemBuilder: (context, index) {
+                      return GridItem(properties: files[index]);
+                    },
+                  );
           },
         ),
       ),
