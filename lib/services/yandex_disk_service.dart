@@ -9,7 +9,8 @@ import '../models/file_item.dart';
 class YandexDiskService {
   static final Map<String, List<FileItem>> _cache = {};
 
-  static Future<List<FileItem>> getFilesList({bool force = false, required String path}) async {
+  static Future<List<FileItem>> getFilesList(
+      {bool force = false, required String path}) async {
     if (!force && _cache.containsKey(path)) {
       return _cache[path]!;
     }
@@ -83,7 +84,8 @@ class YandexDiskService {
   static Future<DiskInfo?> getDiskInfo() async {
     try {
       final response = await http.get(
-        Uri.parse('https://cloud-api.yandex.net/v1/disk?fields=total_space,trash_size,used_space'),
+        Uri.parse(
+            'https://cloud-api.yandex.net/v1/disk?fields=total_space,trash_size,used_space'),
         headers: {
           'Authorization': 'OAuth ${Data().accessToken}',
         },
@@ -105,7 +107,8 @@ class YandexDiskService {
 
   static Future<bool> uploadFile(String filePath) async {
     try {
-      String encodedPath = Uri.encodeComponent(filePath.split('/').last); // Имя файла
+      String encodedPath = Uri.encodeComponent(
+          Data().currentPath + '/' + filePath.split('/').last);
 
       final response = await Dio().get(
         'https://cloud-api.yandex.net/v1/disk/resources/upload?path=$encodedPath',
@@ -143,6 +146,59 @@ class YandexDiskService {
     } catch (e) {
       print("Ошибка при загрузке файла: $e");
       return false;
+    }
+  }
+
+  static Future<List<FileItem>> getTrashFilesList() async {
+    try {
+      final response = await http.get(
+        Uri.parse('https://cloud-api.yandex.net/v1/disk/trash/resources'),
+        headers: {
+          'Authorization': 'OAuth ${Data().accessToken}',
+        },
+      );
+
+      if (response.statusCode == 200) {
+        final Map<String, dynamic> data = jsonDecode(response.body);
+
+        List<FileItem> files = (data['_embedded']['items'] as List)
+            .map((item) => FileItem.fromJson(item))
+            .toList();
+        return files;
+      } else {
+        throw Exception('Не удалось загрузить файлы из корзины');
+      }
+    } catch (e) {
+      throw Exception('Ошибка: $e');
+    }
+  }
+
+  static Future<bool> clearTrash({bool forceAsync = false}) async {
+    try {
+      final Uri uri =
+          Uri.parse('https://cloud-api.yandex.net/v1/disk/trash/resources')
+              .replace(queryParameters: {
+        'force_async': forceAsync.toString(),
+      });
+
+      final response = await http.delete(
+        uri,
+        headers: {
+          'Authorization': 'OAuth ${Data().accessToken}',
+        },
+      );
+
+      if (response.statusCode == 204) {
+        return true;
+      } else if (response.statusCode == 202) {
+        print('Очистка корзины запущена асинхронно.');
+        return true;
+      } else {
+        print(response.body);
+        throw Exception('Не удалось очистить корзину');
+      }
+    } catch (e) {
+      throw Exception('Ошибка: $e');
     }
   }
 }

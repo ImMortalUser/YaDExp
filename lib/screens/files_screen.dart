@@ -28,7 +28,9 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   void initState() {
     super.initState();
-    items = YandexDiskService.getFilesList(path: currentPath);
+    items = currentPath.startsWith("trash")
+        ? YandexDiskService.getTrashFilesList()
+        : YandexDiskService.getFilesList(path: currentPath);
     diskInfo = YandexDiskService.getDiskInfo();
     Data().addListener(_onPathChanged);
     Data().addListener(_onBigIconsChanged);
@@ -46,7 +48,9 @@ class _FilesScreenState extends State<FilesScreen> {
     if (Data().currentPath != currentPath) {
       setState(() {
         currentPath = Data().currentPath;
-        items = YandexDiskService.getFilesList(path: currentPath);
+        items = currentPath.startsWith("trash")
+            ? YandexDiskService.getTrashFilesList()
+            : YandexDiskService.getFilesList(path: currentPath);
       });
     }
   }
@@ -61,7 +65,9 @@ class _FilesScreenState extends State<FilesScreen> {
 
   void _reloadData() {
     setState(() {
-      items = YandexDiskService.getFilesList(path: currentPath, force: true);
+      items = currentPath.startsWith("trash")
+          ? YandexDiskService.getTrashFilesList()
+          : YandexDiskService.getFilesList(path: currentPath, force: true);
       diskInfo = YandexDiskService.getDiskInfo();
     });
   }
@@ -71,7 +77,9 @@ class _FilesScreenState extends State<FilesScreen> {
       Data().goBack();
       setState(() {
         currentPath = Data().currentPath;
-        items = YandexDiskService.getFilesList(path: currentPath);
+        items = currentPath.startsWith("trash")
+            ? YandexDiskService.getTrashFilesList()
+            : YandexDiskService.getFilesList(path: currentPath);
       });
       return false;
     }
@@ -80,6 +88,21 @@ class _FilesScreenState extends State<FilesScreen> {
 
   Future<void> _onRefresh() async {
     _reloadData();
+  }
+
+  // Функция очистки корзины
+  Future<void> _clearTrash() async {
+    bool success = await YandexDiskService.clearTrash();
+    if (success) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Корзина очищена!')),
+      );
+      _reloadData();
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Ошибка при очистке корзины.')),
+      );
+    }
   }
 
   @override
@@ -94,27 +117,48 @@ class _FilesScreenState extends State<FilesScreen> {
               Container(
                 height: 80,
               ),
-              FutureBuilder<DiskInfo?>(
-                  future: diskInfo,
-                  builder: (context, snapshot) {
-                    if (snapshot.connectionState == ConnectionState.waiting) {
-                      return const Center(child: CircularProgressIndicator());
-                    } else if (snapshot.hasError || !snapshot.hasData) {
-                      return const Center(
-                        child: Text("Не удалось загрузить информацию о диске"),
-                      );
-                    } else {
-                      return DiskInfoWidget(diskInfo: snapshot.data!);
-                    }
-                  }),
+              FutureBuilder<DiskInfo?>(future: diskInfo, builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError || !snapshot.hasData) {
+                  return const Center(child: Text("Не удалось загрузить информацию о диске"));
+                } else {
+                  return DiskInfoWidget(diskInfo: snapshot.data!);
+                }
+              }),
               ListTile(
                 title: const Text('Настройки'),
                 onTap: () {
                   Navigator.push(
                     context,
-                    MaterialPageRoute(
-                        builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
                   );
+                },
+              ),
+              ListTile(
+                title: const Text('Диск'),
+                onTap: () {
+                  setState(() {
+                    Data().currentPath = "disk:/";
+                    currentPath = Data().currentPath;
+                    items = currentPath.startsWith("trash")
+                        ? YandexDiskService.getTrashFilesList()
+                        : YandexDiskService.getFilesList(path: currentPath);
+                  });
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: const Text('Корзина'),
+                onTap: () {
+                  setState(() {
+                    Data().currentPath = "trash:/";
+                    currentPath = Data().currentPath;
+                    items = currentPath.startsWith("trash")
+                        ? YandexDiskService.getTrashFilesList()
+                        : YandexDiskService.getFilesList(path: currentPath);
+                  });
+                  Navigator.pop(context);
                 },
               ),
             ],
@@ -132,10 +176,15 @@ class _FilesScreenState extends State<FilesScreen> {
             },
           ),
           actions: [
+            // Если это корзина, показываем иконку очистки
+            if (currentPath.startsWith('trash'))
+              IconButton(
+                icon: const Icon(Icons.delete_forever),
+                onPressed: _clearTrash,
+              ),
             IconButton(
               onPressed: () async {
                 File? file = await FilePickerService.pickFile();
-
                 if (file != null) {
                   bool success = await YandexDiskService.uploadFile(file.path);
                   if (success) {
@@ -166,8 +215,9 @@ class _FilesScreenState extends State<FilesScreen> {
                     Data().currentPath = "disk:/";
                     setState(() {
                       currentPath = Data().currentPath;
-                      items = YandexDiskService.getFilesList(
-                          path: currentPath, force: false);
+                      items = currentPath.startsWith("trash")
+                          ? YandexDiskService.getTrashFilesList()
+                          : YandexDiskService.getFilesList(path: currentPath);
                     });
                     break;
                   case 2:
@@ -194,7 +244,7 @@ class _FilesScreenState extends State<FilesScreen> {
           title: Text(currentPath),
         ),
         body: RefreshIndicator(
-          onRefresh: _onRefresh, // Добавляем метод обновления
+          onRefresh: _onRefresh,
           child: FutureBuilder<List<FileItem>>(
             future: items,
             builder: (context, snapshot) {
@@ -207,7 +257,6 @@ class _FilesScreenState extends State<FilesScreen> {
               }
 
               final files = snapshot.data!;
-
               return bigIcons == false
                   ? ListView.builder(
                 itemCount: files.length,
@@ -216,8 +265,7 @@ class _FilesScreenState extends State<FilesScreen> {
                 },
               )
                   : GridView.builder(
-                gridDelegate:
-                const SliverGridDelegateWithFixedCrossAxisCount(
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
