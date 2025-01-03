@@ -2,9 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:ya_disk_explorer/screens/files_screen.dart';
 import 'package:ya_disk_explorer/screens/sign_in_screen.dart';
+import 'package:ya_disk_explorer/utils/custom_theme.dart';
 import 'package:ya_disk_explorer/utils/data.dart';
 import 'package:ya_disk_explorer/utils/settings_storage.dart';
-import 'package:ya_disk_explorer/widgets/video_player_widget.dart';
 
 bool hasToken = false;
 
@@ -42,7 +42,9 @@ class MyApp extends StatelessWidget {
       create: (_) => data,
       child: Consumer<Data>(builder: (context, data, child) {
         return MaterialApp(
-          theme: data.theme == "light" ? ThemeData.light() : ThemeData.dark(),
+          theme: CustomTheme.lightTheme,
+          darkTheme: CustomTheme.darkTheme,
+          themeMode: data.theme == "light" ? ThemeMode.light : ThemeMode.dark,
           debugShowCheckedModeBanner: false,
           home: hasToken ? const FilesScreen() : SignInScreen(),
         );

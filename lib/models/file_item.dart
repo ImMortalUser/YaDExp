@@ -1,5 +1,3 @@
-import 'dart:ffi';
-
 class FileItem {
   final String name;
   final String type;
