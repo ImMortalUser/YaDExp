@@ -6,7 +6,7 @@ import '../services/yandex_auth.dart';
 import 'files_screen.dart';
 
 class SignInScreen extends StatelessWidget {
-  SignInScreen({super.key});
+  const SignInScreen({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -19,11 +19,12 @@ class SignInScreen extends StatelessWidget {
           _SignInBackground(size: size),
           _SignInForm(size: size),
           IconButton(
-            onPressed: () {Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                  builder: (context) => const FilesScreen()),
-            );},
+            onPressed: () {
+              Navigator.pushReplacement(
+                context,
+                MaterialPageRoute(builder: (context) => const FilesScreen()),
+              );
+            },
             icon: const Icon(
               Icons.folder,
               size: 100,
@@ -113,48 +114,31 @@ class _SignInForm extends StatelessWidget {
   Widget build(BuildContext context) {
     return Center(
       child: Container(
-        width: size.width * 0.9,
+        width: size.width * 0.45,
         height: size.height * 0.2,
         decoration: BoxDecoration(
           borderRadius: BorderRadius.circular(20),
           color: Theme.of(context).primaryColor,
         ),
-        child: Row(
+        child: Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: _SignInButton(
-                    imagePath: 'assets/images/yandex_icon.png',
-                    onPressed: () async {
-                      await YandexAuth.authenticate();
-                      await SettingsStorage.loadToken()
-                          .then((token) => Data().accessToken = token);
-                      Navigator.pushReplacement(
-                        context,
-                        MaterialPageRoute(
-                            builder: (context) => const FilesScreen()),
-                      );
-                    },
-                  ),
-                ),
-                _SignedIn(signedIn: Data().accessToken != null),
-              ],
+            Expanded(
+              child: _SignInButton(
+                imagePath: 'assets/images/yandex_icon.png',
+                onPressed: () async {
+                  await YandexAuth.authenticate();
+                  await SettingsStorage.loadToken()
+                      .then((token) => Data().accessToken = token);
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                        builder: (context) => const FilesScreen()),
+                  );
+                },
+              ),
             ),
-            Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                Expanded(
-                  child: _SignInButton(
-                    imagePath: 'assets/images/google_icon.png',
-                    onPressed: () {}, // TODO: Добавить Google авторизацию
-                  ),
-                ),
-                _SignedIn(signedIn: Data().accessToken != null),
-              ],
-            ),
+            _SignedIn(signedIn: Data().accessToken != null),
           ],
         ),
       ),
@@ -186,7 +170,7 @@ class _SignInButton extends StatelessWidget {
 class _SignedIn extends StatelessWidget {
   final bool signedIn;
 
-  const _SignedIn({super.key, required this.signedIn});
+  const _SignedIn({required this.signedIn});
 
   @override
   Widget build(BuildContext context) {

@@ -4,7 +4,7 @@ import 'package:audioplayers/audioplayers.dart';
 class MusicPlayerWidget extends StatefulWidget {
   final String audioUrl;
 
-  const MusicPlayerWidget({Key? key, required this.audioUrl}) : super(key: key);
+  const MusicPlayerWidget({super.key, required this.audioUrl});
 
   @override
   _MusicPlayerWidgetState createState() => _MusicPlayerWidgetState();
@@ -13,7 +13,7 @@ class MusicPlayerWidget extends StatefulWidget {
 class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
   final AudioPlayer _audioPlayer = AudioPlayer();
   bool _isPlaying = false;
-  bool _isLoading = true; // Для отображения индикатора загрузки
+  bool _isLoading = true;
   Duration _currentPosition = Duration.zero;
   Duration _totalDuration = Duration.zero;
 
@@ -21,21 +21,18 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
   void initState() {
     super.initState();
 
-    // Подписка на изменения позиции
     _audioPlayer.onPositionChanged.listen((Duration position) {
       setState(() {
         _currentPosition = position;
       });
     });
 
-    // Подписка на изменение общей длительности
     _audioPlayer.onDurationChanged.listen((Duration duration) {
       setState(() {
         _totalDuration = duration;
       });
     });
 
-    // Подписка на событие изменения состояния плеера
     _audioPlayer.onPlayerStateChanged.listen((PlayerState state) {
       if (state == PlayerState.playing) {
         setState(() {
@@ -48,15 +45,12 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
       }
     });
 
-    // Начинаем загружать и готовить аудио для воспроизведения
     _loadAudio();
   }
 
   Future<void> _loadAudio() async {
-    // Запускаем загрузку аудио с URL
     await _audioPlayer.setSource(UrlSource(widget.audioUrl));
 
-    // Делаем кнопку Play доступной, когда аудио готово к воспроизведению
     setState(() {
       _isLoading = false;
     });
@@ -76,7 +70,6 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
     }
   }
 
-  // Форматирование времени в MM:SS
   String _formatDuration(Duration duration) {
     String twoDigits(int n) => n.toString().padLeft(2, '0');
     final minutes = twoDigits(duration.inMinutes.remainder(60));
@@ -89,9 +82,8 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        // Если аудио загружено и готово, показываем кнопку Play/Pause
         _isLoading
-            ? const CircularProgressIndicator() // Индикатор загрузки
+            ? const CircularProgressIndicator()
             : IconButton(
           icon: Icon(
             _isPlaying ? Icons.pause : Icons.play_arrow,
@@ -102,7 +94,6 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
 
         const SizedBox(height: 16),
 
-        // Прогресс-бар (с плавной анимацией)
         Slider(
           value: _currentPosition.inMilliseconds.toDouble(),
           max: _totalDuration.inMilliseconds.toDouble(),
@@ -113,7 +104,6 @@ class _MusicPlayerWidgetState extends State<MusicPlayerWidget> {
 
         const SizedBox(height: 8),
 
-        // Отображение времени
         Row(
           mainAxisAlignment: MainAxisAlignment.spaceBetween,
           children: [

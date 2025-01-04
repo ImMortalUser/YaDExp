@@ -4,6 +4,7 @@ class SettingsStorage {
   static const String _accessTokenKey = 'access_token';
   static const String _themeKey = 'theme';
   static const String _bigIconsKey = 'big_icons';
+  static const String _languageKey = 'language';
 
   static Future<void> saveToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -20,6 +21,11 @@ class SettingsStorage {
     await prefs.setBool(_bigIconsKey, state);
   }
 
+  static Future<void> saveLang(bool state) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setBool(_languageKey, state);
+  }
+
   static Future<String?> loadToken() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getString(_accessTokenKey);
@@ -32,6 +38,11 @@ class SettingsStorage {
   static Future<bool?> loadBigIcons() async {
     final prefs = await SharedPreferences.getInstance();
     return prefs.getBool(_bigIconsKey);
+  }
+
+  static Future<bool?> loadLang() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getBool(_languageKey);
   }
 
   static Future<void> removeToken() async {

@@ -1,16 +1,18 @@
 import 'dart:convert';
 import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:flutter/material.dart';  // для ScaffoldMessenger
 import 'package:ya_disk_explorer/utils/data.dart';
 import 'package:http/http.dart' as http;
 import '../models/disk_info.dart';
 import '../models/file_item.dart';
+import 'package:ya_disk_explorer/utils/app_localizations.dart';  // Для локализации
 
 class YandexDiskService {
   static final Map<String, List<FileItem>> _cache = {};
 
   static Future<List<FileItem>> getFilesList(
-      {bool force = false, required String path}) async {
+      {bool force = false, required String path, required BuildContext context}) async {
     if (!force && _cache.containsKey(path)) {
       return _cache[path]!;
     }
@@ -21,7 +23,7 @@ class YandexDiskService {
       final response = await http.get(
         Uri.parse(
             'https://cloud-api.yandex.net/v1/disk/resources?path=$encodedPath&'
-            'fields=_embedded.items.name,_embedded.items.type,_embedded.items.path,_embedded.items.created,_embedded.items.size,_embedded.items.media_type,_embedded.items.preview,_embedded.items.file'),
+                'fields=_embedded.items.name,_embedded.items.type,_embedded.items.path,_embedded.items.created,_embedded.items.size,_embedded.items.media_type,_embedded.items.preview,_embedded.items.file'),
         headers: {
           'Authorization': 'OAuth ${Data().accessToken}',
         },
@@ -37,24 +39,29 @@ class YandexDiskService {
           }
 
           _cache[path] = files;
-
           return files;
         } else {
-          print("Нет данных о файлах в указанной папке");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).translate("trash_load_error"))),
+          );
           return [];
         }
       } else {
         final error = jsonDecode(response.body);
-        print("Ошибка: ${error['message']}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", error['message']))),
+        );
         return [];
       }
     } catch (e) {
-      print('Ошибка при выполнении запроса: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString()))),
+      );
       return [];
     }
   }
 
-  static Future<bool> deleteFile(String path) async {
+  static Future<bool> deleteFile(String path, BuildContext context) async {
     try {
       String encodedPath = Uri.encodeComponent(path);
 
@@ -67,21 +74,27 @@ class YandexDiskService {
       );
 
       if (response.statusCode == 204) {
-        print("Файл удален успешно.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("file_deleted"))),
+        );
         _cache.remove(path);
         return true;
       } else {
         final error = jsonDecode(response.body);
-        print("Ошибка: ${error['message']}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", error['message']))),
+        );
         return false;
       }
     } catch (e) {
-      print('Ошибка при выполнении запроса: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString()))),
+      );
       return false;
     }
   }
 
-  static Future<DiskInfo?> getDiskInfo() async {
+  static Future<DiskInfo?> getDiskInfo(BuildContext context) async {
     try {
       final response = await http.get(
         Uri.parse(
@@ -96,19 +109,23 @@ class YandexDiskService {
         return DiskInfo.fromJson(data);
       } else {
         final error = jsonDecode(response.body);
-        print("Ошибка при получении информации о диске: ${error['message']}");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", error['message']))),
+        );
         return null;
       }
     } catch (e) {
-      print('Ошибка при выполнении запроса: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString()))),
+      );
       return null;
     }
   }
 
-  static Future<bool> uploadFile(String filePath) async {
+  static Future<bool> uploadFile(String filePath, BuildContext context) async {
     try {
       String encodedPath = Uri.encodeComponent(
-          Data().currentPath + '/' + filePath.split('/').last);
+          '${Data().currentPath}/${filePath.split('/').last}');
 
       final response = await Dio().get(
         'https://cloud-api.yandex.net/v1/disk/resources/upload?path=$encodedPath',
@@ -133,23 +150,31 @@ class YandexDiskService {
         );
 
         if (uploadResponse.statusCode == 201) {
-          print("Файл успешно загружен на Яндекс.Диск.");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).translate("file_upload_success"))),
+          );
           return true;
         } else {
-          print("Ошибка при загрузке файла: ${uploadResponse.statusCode}");
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(AppLocalizations.of(context).translate("file_upload_error"))),
+          );
           return false;
         }
       } else {
-        print("Не удалось получить ссылку для загрузки файла.");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("failed_to_get_link"))),
+        );
         return false;
       }
     } catch (e) {
-      print("Ошибка при загрузке файла: $e");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate("file_upload_error"))),
+      );
       return false;
     }
   }
 
-  static Future<List<FileItem>> getTrashFilesList() async {
+  static Future<List<FileItem>> getTrashFilesList(BuildContext context) async {
     try {
       final response = await http.get(
         Uri.parse('https://cloud-api.yandex.net/v1/disk/trash/resources'),
@@ -166,18 +191,24 @@ class YandexDiskService {
             .toList();
         return files;
       } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("trash_load_error"))),
+        );
         throw Exception('Не удалось загрузить файлы из корзины');
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString()))),
+      );
       throw Exception('Ошибка: $e');
     }
   }
 
-  static Future<bool> clearTrash({bool forceAsync = false}) async {
+  static Future<bool> clearTrash({bool forceAsync = false, required BuildContext context}) async {
     try {
       final Uri uri =
-          Uri.parse('https://cloud-api.yandex.net/v1/disk/trash/resources')
-              .replace(queryParameters: {
+      Uri.parse('https://cloud-api.yandex.net/v1/disk/trash/resources')
+          .replace(queryParameters: {
         'force_async': forceAsync.toString(),
       });
 
@@ -189,15 +220,25 @@ class YandexDiskService {
       );
 
       if (response.statusCode == 204) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("trash_clear_success"))),
+        );
         return true;
       } else if (response.statusCode == 202) {
-        print('Очистка корзины запущена асинхронно.');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("trash_clear_async"))),
+        );
         return true;
       } else {
-        print(response.body);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", response.body))),
+        );
         throw Exception('Не удалось очистить корзину');
       }
     } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString()))),
+      );
       throw Exception('Ошибка: $e');
     }
   }

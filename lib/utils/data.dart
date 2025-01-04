@@ -8,8 +8,11 @@ class Data extends ChangeNotifier {
   final List<String> _pathHistory = [];
   String _theme = "light";
   bool _bigIcons = false;
+  bool _isEng = false;
 
   String get currentPath => _currentPath;
+
+  bool get isEng => _isEng;
 
   Function? get refresh => _refresh;
 
@@ -45,6 +48,11 @@ class Data extends ChangeNotifier {
 
   void switchBigIcons() {
     _bigIcons = _bigIcons == true ? false : true;
+    notifyListeners();
+  }
+
+  void switchLang() {
+    _isEng = _isEng == true ? false : true;
     notifyListeners();
   }
 

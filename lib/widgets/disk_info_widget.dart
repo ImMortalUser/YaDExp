@@ -1,20 +1,19 @@
 import 'package:flutter/material.dart';
 import '../models/disk_info.dart';
+import '../utils/app_localizations.dart';
 
 class DiskInfoWidget extends StatelessWidget {
   final DiskInfo diskInfo;
 
-  const DiskInfoWidget({Key? key, required this.diskInfo}) : super(key: key);
+  const DiskInfoWidget({super.key, required this.diskInfo});
 
   @override
   Widget build(BuildContext context) {
-    double usedSpacePercentage = diskInfo.totalSpace > 0
-        ? diskInfo.usedSpace / diskInfo.totalSpace
-        : 0;
+    double usedSpacePercentage =
+        diskInfo.totalSpace > 0 ? diskInfo.usedSpace / diskInfo.totalSpace : 0;
 
-    double trashSpacePercentage = diskInfo.totalSpace > 0
-        ? diskInfo.trashSize / diskInfo.totalSpace
-        : 0;
+    double trashSpacePercentage =
+        diskInfo.totalSpace > 0 ? diskInfo.trashSize / diskInfo.totalSpace : 0;
 
     return Padding(
       padding: const EdgeInsets.all(16.0),
@@ -22,13 +21,13 @@ class DiskInfoWidget extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'Информация о диске',
+            AppLocalizations.of(context).translate("disk_info_title"),
             style: Theme.of(context).textTheme.titleLarge,
           ),
           const SizedBox(height: 16),
           _buildSpaceUsageInfo(
             context,
-            'Использованное пространство',
+            AppLocalizations.of(context).translate("used_space"),
             diskInfo.usedSpace,
             diskInfo.totalSpace,
             usedSpacePercentage,
@@ -41,12 +40,12 @@ class DiskInfoWidget extends StatelessWidget {
   }
 
   Widget _buildSpaceUsageInfo(
-      BuildContext context,
-      String title,
-      int currentSize,
-      int totalSize,
-      double percentage,
-      ) {
+    BuildContext context,
+    String title,
+    int currentSize,
+    int totalSize,
+    double percentage,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -58,11 +57,11 @@ class DiskInfoWidget extends StatelessWidget {
         LinearProgressIndicator(
           value: percentage,
           backgroundColor: Colors.grey[300],
-          valueColor: AlwaysStoppedAnimation<Color>(Colors.blue),
+          valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
         ),
         const SizedBox(height: 8),
         Text(
-          'Занято: ${(percentage * 100).toStringAsFixed(1)}%',
+          '${AppLocalizations.of(context).translate("occupied")}${(percentage * 100).toStringAsFixed(1)}%',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ],
@@ -74,7 +73,7 @@ class DiskInfoWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          'Размер корзины: ${_formatSize(diskInfo.trashSize)}',
+          '${AppLocalizations.of(context).translate("trash_size")}${_formatSize(diskInfo.trashSize)}',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       ],

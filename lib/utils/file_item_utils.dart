@@ -1,15 +1,14 @@
 import 'dart:typed_data';
-
 import 'package:flutter/material.dart';
 import 'package:dio/dio.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:ya_disk_explorer/services/yandex_disk_service.dart';
 import 'package:ya_disk_explorer/widgets/music_player_widget.dart';
 import 'dart:io';
-
 import '../utils/data.dart';
 import '../models/file_item.dart';
 import '../widgets/video_player_widget.dart';
+import '../utils/app_localizations.dart'; // для локализации
 
 class FileItemUtils {
   static Future<void> downloadFile(
@@ -35,22 +34,59 @@ class FileItemUtils {
             final filePath = '${directory.path}/${properties.name}';
             final fileResponse = await Dio().download(downloadUrl, filePath);
             if (fileResponse.statusCode == 200) {
-              _showDownloadSuccessDialog(context);
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)
+                      .translate("download_success")),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
             } else {
-              print('Не удалось скачать файл');
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(AppLocalizations.of(context)
+                      .translate("download_error")),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
             }
           } else {
-            print('Не найдена директория для загрузки');
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text(AppLocalizations.of(context)
+                    .translate("directory_not_found")),
+                duration: const Duration(seconds: 2),
+              ),
+            );
           }
         } else {
-          print('Не найден URL для скачивания');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(AppLocalizations.of(context)
+                  .translate("download_url_not_found")),
+              duration: const Duration(seconds: 2),
+            ),
+          );
         }
       } else {
-        print(
-            'Ошибка при получении URL для скачивания: ${response.statusCode}');
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)
+                .translate("download_url_error")
+                .replaceFirst("{status}", response.statusCode.toString())),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
     } catch (e) {
-      print('Ошибка при загрузке: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .translate("download_error")
+              .replaceFirst("{error}", e.toString())),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -103,26 +139,6 @@ class FileItemUtils {
     );
   }
 
-  static void _showDownloadSuccessDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Completed'),
-          content: const Text('File successfully downloaded'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('Close'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
   static Future<Directory?> _getDownloadDirectory() async {
     if (Platform.isAndroid) {
       return Directory('/storage/emulated/0/Download');
@@ -143,23 +159,23 @@ class FileItemUtils {
               maxHeight: 200,
             ),
             child: properties.mediaType == "image"
-                ? FutureBuilder<Uint8List>(
-                    future: fetchPreviewImage(properties.previewUrl!),
-                    builder: (context, snapshot) {
-                      if (snapshot.connectionState == ConnectionState.waiting) {
-                        return const Center(child: CircularProgressIndicator());
-                      } else if (snapshot.hasError || !snapshot.hasData) {
-                        return const Center(child: Icon(Icons.error));
-                      } else {
-                        return Image.memory(snapshot.data!);
-                      }
-                    },
-                  )
+                ? FutureBuilder<Uint8List>( // Загрузка изображения
+              future: fetchPreviewImage(properties.previewUrl!),
+              builder: (context, snapshot) {
+                if (snapshot.connectionState == ConnectionState.waiting) {
+                  return const Center(child: CircularProgressIndicator());
+                } else if (snapshot.hasError || !snapshot.hasData) {
+                  return const Center(child: Icon(Icons.error));
+                } else {
+                  return Image.memory(snapshot.data!);
+                }
+              },
+            )
                 : properties.mediaType == "video"
-                    ? VideoPlayerWidget(videoUrl: properties.downloadUrl!)
-                    : properties.mediaType == "audio"
-                        ? MusicPlayerWidget(audioUrl: properties.downloadUrl!)
-                        : const Text("Unsupported file format."),
+                ? VideoPlayerWidget(videoUrl: properties.downloadUrl!)
+                : properties.mediaType == "audio"
+                ? MusicPlayerWidget(audioUrl: properties.downloadUrl!)
+                : const Text("Unsupported file format."),
           ),
           actions: <Widget>[
             TextButton(
@@ -201,64 +217,43 @@ class FileItemUtils {
       BuildContext context, FileItem properties) async {
     try {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Удаление файла началось...'),
-          duration: Duration(seconds: 2),
+        SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .translate("file_deletion_started")),
+          duration: const Duration(seconds: 2),
         ),
       );
 
-      bool success = await YandexDiskService.deleteFile(properties.path);
+      bool success = await YandexDiskService.deleteFile(properties.path, context);
 
       if (success) {
-        _showDeleteSuccessDialog(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)
+                .translate("file_deletion_success")),
+            duration: const Duration(seconds: 2),
+          ),
+        );
         Data().refresh!();
       } else {
-        _showDeleteFailureDialog(context);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(AppLocalizations.of(context)
+                .translate("file_deletion_error")),
+            duration: const Duration(seconds: 2),
+          ),
+        );
       }
-
     } catch (e) {
       print('Ошибка при удалении: $e');
-      _showDeleteFailureDialog(context);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(AppLocalizations.of(context)
+              .translate("file_deletion_error")
+              .replaceFirst("{error}", e.toString())),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
-  }
-
-  static void _showDeleteSuccessDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Удаление прошло успешно'),
-          content: const Text('Файл был удален с Яндекс.Диска.'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  static void _showDeleteFailureDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Ошибка при удалении'),
-          content: const Text('Не удалось удалить файл.'),
-          actions: <Widget>[
-            TextButton(
-              child: const Text('OK'),
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-            ),
-          ],
-        );
-      },
-    );
   }
 }

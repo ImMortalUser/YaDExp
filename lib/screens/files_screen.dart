@@ -2,15 +2,17 @@ import 'dart:io';
 
 import 'package:flutter/material.dart';
 import 'package:ya_disk_explorer/models/disk_info.dart';
-import 'package:ya_disk_explorer/screens/settings_screen.dart';
+import 'package:ya_disk_explorer/screens/sign_in_screen.dart';
 import 'package:ya_disk_explorer/services/yandex_disk_service.dart';
 import 'package:ya_disk_explorer/utils/settings_storage.dart';
 import 'package:ya_disk_explorer/widgets/disk_info_widget.dart';
 import 'package:ya_disk_explorer/widgets/file_list_item.dart';
 import '../models/file_item.dart';
 import '../services/file_picker.dart';
+import '../utils/app_localizations.dart';
 import '../utils/data.dart';
 import '../widgets/file_greed_item.dart';
+import '../widgets/setting_list_item.dart';
 
 class FilesScreen extends StatefulWidget {
   const FilesScreen({super.key});
@@ -28,12 +30,11 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   void initState() {
     super.initState();
-    items = currentPath.startsWith("trash")
-        ? YandexDiskService.getTrashFilesList()
-        : YandexDiskService.getFilesList(path: currentPath);
-    diskInfo = YandexDiskService.getDiskInfo();
+    items = _loadItems();
+    diskInfo = YandexDiskService.getDiskInfo(context);
     Data().addListener(_onPathChanged);
     Data().addListener(_onBigIconsChanged);
+    Data().addListener(_onLangChanged);
     Data().refresh = _reloadData;
   }
 
@@ -41,16 +42,21 @@ class _FilesScreenState extends State<FilesScreen> {
   void dispose() {
     Data().removeListener(_onPathChanged);
     Data().removeListener(_onBigIconsChanged);
+    Data().removeListener(_onLangChanged);
     super.dispose();
+  }
+
+  Future<List<FileItem>> _loadItems() {
+    return currentPath.startsWith("trash")
+        ? YandexDiskService.getTrashFilesList(context)
+        : YandexDiskService.getFilesList(path: currentPath, context: context);
   }
 
   void _onPathChanged() {
     if (Data().currentPath != currentPath) {
       setState(() {
         currentPath = Data().currentPath;
-        items = currentPath.startsWith("trash")
-            ? YandexDiskService.getTrashFilesList()
-            : YandexDiskService.getFilesList(path: currentPath);
+        items = _loadItems();
       });
     }
   }
@@ -63,12 +69,15 @@ class _FilesScreenState extends State<FilesScreen> {
     }
   }
 
+  void _onLangChanged() {
+    setState(() {
+    });
+  }
+
   void _reloadData() {
     setState(() {
-      items = currentPath.startsWith("trash")
-          ? YandexDiskService.getTrashFilesList()
-          : YandexDiskService.getFilesList(path: currentPath, force: true);
-      diskInfo = YandexDiskService.getDiskInfo();
+      items = _loadItems();
+      diskInfo = YandexDiskService.getDiskInfo(context);
     });
   }
 
@@ -77,9 +86,7 @@ class _FilesScreenState extends State<FilesScreen> {
       Data().goBack();
       setState(() {
         currentPath = Data().currentPath;
-        items = currentPath.startsWith("trash")
-            ? YandexDiskService.getTrashFilesList()
-            : YandexDiskService.getFilesList(path: currentPath);
+        items = _loadItems();
       });
       return false;
     }
@@ -90,17 +97,20 @@ class _FilesScreenState extends State<FilesScreen> {
     _reloadData();
   }
 
-  // Функция очистки корзины
   Future<void> _clearTrash() async {
-    bool success = await YandexDiskService.clearTrash();
+    bool success = await YandexDiskService.clearTrash(context: context);
     if (success) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Корзина очищена!')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).translate('trash_cleared')),
+        ),
       );
       _reloadData();
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Ошибка при очистке корзины.')),
+        SnackBar(
+          content: Text(AppLocalizations.of(context).translate('trash_clear_error')),
+        ),
       );
     }
   }
@@ -111,62 +121,83 @@ class _FilesScreenState extends State<FilesScreen> {
       onWillPop: _onWillPop,
       child: Scaffold(
         drawer: Drawer(
+          backgroundColor: Theme.of(context).primaryColor,
           child: ListView(
             padding: EdgeInsets.zero,
             children: [
-              Container(
-                height: 80,
+              Container(height: 80),
+              FutureBuilder<DiskInfo?>(
+                future: diskInfo,
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState == ConnectionState.waiting) {
+                    return const Center(child: CircularProgressIndicator());
+                  } else if (snapshot.hasError || !snapshot.hasData) {
+                    return Center(
+                      child: Text(AppLocalizations.of(context).translate('disk_info_error')),
+                    );
+                  } else {
+                    return DiskInfoWidget(diskInfo: snapshot.data!);
+                  }
+                },
               ),
-              FutureBuilder<DiskInfo?>(future: diskInfo, builder: (context, snapshot) {
-                if (snapshot.connectionState == ConnectionState.waiting) {
-                  return const Center(child: CircularProgressIndicator());
-                } else if (snapshot.hasError || !snapshot.hasData) {
-                  return const Center(child: Text("Не удалось загрузить информацию о диске"));
-                } else {
-                  return DiskInfoWidget(diskInfo: snapshot.data!);
-                }
-              }),
+              Container(
+                height: 5,
+                width: 100,
+                color: Theme.of(context).primaryColorDark,
+              ),
               ListTile(
-                title: const Text('Настройки'),
+                title: Text(AppLocalizations.of(context).translate('disk')),
                 onTap: () {
-                  Navigator.push(
+                  Data().currentPath = "disk:/";
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context).translate('trash')),
+                onTap: () {
+                  Data().currentPath = "trash:/";
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                title: Text(AppLocalizations.of(context).translate('sign_in_screen')),
+                onTap: () {
+                  Navigator.pushReplacement(
                     context,
-                    MaterialPageRoute(builder: (context) => const SettingsScreen()),
+                    MaterialPageRoute(builder: (context) => const SignInScreen()),
                   );
                 },
               ),
-              ListTile(
-                title: const Text('Диск'),
+              SettingItem(
+                name: AppLocalizations.of(context).translate('dark_theme'),
                 onTap: () {
-                  setState(() {
-                    Data().currentPath = "disk:/";
-                    currentPath = Data().currentPath;
-                    items = currentPath.startsWith("trash")
-                        ? YandexDiskService.getTrashFilesList()
-                        : YandexDiskService.getFilesList(path: currentPath);
-                  });
-                  Navigator.pop(context);
+                  Data().switchTheme();
+                  SettingsStorage.saveTheme(Data().theme);
                 },
+                initValue: Data().theme == "dark",
               ),
-              ListTile(
-                title: const Text('Корзина'),
+              SettingItem(
+                name: AppLocalizations.of(context).translate('big_icons'),
                 onTap: () {
-                  setState(() {
-                    Data().currentPath = "trash:/";
-                    currentPath = Data().currentPath;
-                    items = currentPath.startsWith("trash")
-                        ? YandexDiskService.getTrashFilesList()
-                        : YandexDiskService.getFilesList(path: currentPath);
-                  });
-                  Navigator.pop(context);
+                  Data().switchBigIcons();
+                  SettingsStorage.saveBigIcons(Data().bigIcons);
                 },
+                initValue: Data().bigIcons,
+              ),
+              SettingItem(
+                name: AppLocalizations.of(context).translate('enable_english'),
+                onTap: () {
+                  Data().switchLang();
+                  SettingsStorage.saveLang(Data().isEng);
+                },
+                initValue: Data().isEng,
               ),
             ],
           ),
         ),
         appBar: AppBar(
           leading: Builder(
-            builder: (BuildContext context) {
+            builder: (context) {
               return IconButton(
                 icon: const Icon(Icons.menu),
                 onPressed: () {
@@ -176,7 +207,6 @@ class _FilesScreenState extends State<FilesScreen> {
             },
           ),
           actions: [
-            // Если это корзина, показываем иконку очистки
             if (currentPath.startsWith('trash'))
               IconButton(
                 icon: const Icon(Icons.delete_forever),
@@ -186,20 +216,26 @@ class _FilesScreenState extends State<FilesScreen> {
               onPressed: () async {
                 File? file = await FilePickerService.pickFile();
                 if (file != null) {
-                  bool success = await YandexDiskService.uploadFile(file.path);
+                  bool success = await YandexDiskService.uploadFile(file.path, context);
                   if (success) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Файл успешно загружен!')),
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context).translate('file_uploaded')),
+                      ),
                     );
                     _reloadData();
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Ошибка загрузки файла.')),
+                      SnackBar(
+                        content: Text(AppLocalizations.of(context).translate('file_upload_error')),
+                      ),
                     );
                   }
                 } else {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Файл не выбран.')),
+                    SnackBar(
+                      content: Text(AppLocalizations.of(context).translate('file_not_selected')),
+                    ),
                   );
                 }
               },
@@ -216,8 +252,8 @@ class _FilesScreenState extends State<FilesScreen> {
                     setState(() {
                       currentPath = Data().currentPath;
                       items = currentPath.startsWith("trash")
-                          ? YandexDiskService.getTrashFilesList()
-                          : YandexDiskService.getFilesList(path: currentPath);
+                          ? YandexDiskService.getTrashFilesList(context)
+                          : YandexDiskService.getFilesList(path: currentPath, context: context);
                     });
                     break;
                   case 2:
@@ -226,17 +262,17 @@ class _FilesScreenState extends State<FilesScreen> {
                 }
               },
               itemBuilder: (context) => [
-                const PopupMenuItem<int>(
+                PopupMenuItem<int>(
                   value: 0,
-                  child: Text('Обновить'),
+                  child: Text(AppLocalizations.of(context).translate('refresh')),
                 ),
-                const PopupMenuItem<int>(
+                PopupMenuItem<int>(
                   value: 1,
-                  child: Text('Домой'),
+                  child: Text(AppLocalizations.of(context).translate('home')),
                 ),
-                const PopupMenuItem<int>(
+                PopupMenuItem<int>(
                   value: 2,
-                  child: Text('Удалить токен'),
+                  child: Text(AppLocalizations.of(context).translate('delete_token')),
                 ),
               ],
             ),
@@ -251,21 +287,16 @@ class _FilesScreenState extends State<FilesScreen> {
               if (snapshot.connectionState == ConnectionState.waiting) {
                 return const Center(child: CircularProgressIndicator());
               } else if (snapshot.hasError) {
-                return Center(child: Text('Ошибка: ${snapshot.error}'));
+                return Center(child: Text('${AppLocalizations.of(context).translate('error')}: ${snapshot.error}'));
               } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                return const Center(child: Text('Нет файлов.'));
+                return Center(child: Text(AppLocalizations.of(context).translate('no_files')));
               }
 
               final files = snapshot.data!;
-              return bigIcons == false
-                  ? ListView.builder(
-                itemCount: files.length,
-                itemBuilder: (context, index) {
-                  return ListItem(properties: files[index]);
-                },
-              )
-                  : GridView.builder(
-                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+              return bigIcons
+                  ? GridView.builder(
+                gridDelegate:
+                const SliverGridDelegateWithFixedCrossAxisCount(
                   crossAxisCount: 2,
                   crossAxisSpacing: 10,
                   mainAxisSpacing: 10,
@@ -273,6 +304,12 @@ class _FilesScreenState extends State<FilesScreen> {
                 itemCount: files.length,
                 itemBuilder: (context, index) {
                   return GridItem(properties: files[index]);
+                },
+              )
+                  : ListView.builder(
+                itemCount: files.length,
+                itemBuilder: (context, index) {
+                  return ListItem(properties: files[index]);
                 },
               );
             },
