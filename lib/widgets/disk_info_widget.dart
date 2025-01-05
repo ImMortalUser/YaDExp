@@ -61,7 +61,7 @@ class DiskInfoWidget extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${AppLocalizations.of(context).translate("occupied")}${(percentage * 100).toStringAsFixed(1)}%',
+          '${AppLocalizations.of(context).translate("occupied")}${(percentage * 100).toStringAsFixed(1)} %',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ],
@@ -73,7 +73,7 @@ class DiskInfoWidget extends StatelessWidget {
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
-          '${AppLocalizations.of(context).translate("trash_size")}${_formatSize(diskInfo.trashSize)}',
+          '${AppLocalizations.of(context).translate("trash_size")} ${_formatSize(diskInfo.trashSize)}',
           style: Theme.of(context).textTheme.bodyLarge,
         ),
       ],

@@ -30,7 +30,7 @@ class _FilesScreenState extends State<FilesScreen> {
   @override
   void initState() {
     super.initState();
-    items = _loadItems();
+    items = _loadItems(false);
     diskInfo = YandexDiskService.getDiskInfo(context);
     Data().addListener(_onPathChanged);
     Data().addListener(_onBigIconsChanged);
@@ -46,17 +46,17 @@ class _FilesScreenState extends State<FilesScreen> {
     super.dispose();
   }
 
-  Future<List<FileItem>> _loadItems() {
+  Future<List<FileItem>> _loadItems(bool force) {
     return currentPath.startsWith("trash")
         ? YandexDiskService.getTrashFilesList(context)
-        : YandexDiskService.getFilesList(path: currentPath, context: context);
+        : YandexDiskService.getFilesList(path: currentPath, context: context, force: force);
   }
 
   void _onPathChanged() {
     if (Data().currentPath != currentPath) {
       setState(() {
         currentPath = Data().currentPath;
-        items = _loadItems();
+        items = _loadItems(false);
       });
     }
   }
@@ -76,7 +76,7 @@ class _FilesScreenState extends State<FilesScreen> {
 
   void _reloadData() {
     setState(() {
-      items = _loadItems();
+      items = _loadItems(true);
       diskInfo = YandexDiskService.getDiskInfo(context);
     });
   }
@@ -86,7 +86,7 @@ class _FilesScreenState extends State<FilesScreen> {
       Data().goBack();
       setState(() {
         currentPath = Data().currentPath;
-        items = _loadItems();
+        items = _loadItems(false);
       });
       return false;
     }
@@ -196,6 +196,7 @@ class _FilesScreenState extends State<FilesScreen> {
           ),
         ),
         appBar: AppBar(
+          backgroundColor: Theme.of(context).primaryColorDark,
           leading: Builder(
             builder: (context) {
               return IconButton(

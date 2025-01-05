@@ -55,7 +55,7 @@ class YandexDiskService {
       }
     } catch (e) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString()))),
+        SnackBar(content: Text(AppLocalizations.of(context).translate("error_occurred").replaceFirst("{error}", e.toString().toString()))),
       );
       return [];
     }
