@@ -12,9 +12,6 @@ class DiskInfoWidget extends StatelessWidget {
     double usedSpacePercentage =
         diskInfo.totalSpace > 0 ? diskInfo.usedSpace / diskInfo.totalSpace : 0;
 
-    double trashSpacePercentage =
-        diskInfo.totalSpace > 0 ? diskInfo.trashSize / diskInfo.totalSpace : 0;
-
     return Padding(
       padding: const EdgeInsets.all(16.0),
       child: Column(
@@ -61,7 +58,7 @@ class DiskInfoWidget extends StatelessWidget {
         ),
         const SizedBox(height: 8),
         Text(
-          '${AppLocalizations.of(context).translate("occupied")}${(percentage * 100).toStringAsFixed(1)} %',
+          '${AppLocalizations.of(context).translate("occupied")} ${(percentage * 100).toStringAsFixed(1)}%',
           style: Theme.of(context).textTheme.bodyMedium,
         ),
       ],
